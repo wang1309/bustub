@@ -38,8 +38,26 @@ class BufferPoolManagerInstance : public BufferPoolManager {
    * @param replacer_k the lookback constant k for the LRU-K replacer
    * @param log_manager the log manager (for testing only: nullptr = disable logging). Please ignore this for P1.
    */
-  BufferPoolManagerInstance(size_t pool_size, DiskManager *disk_manager, size_t replacer_k = LRUK_REPLACER_K,
-                            LogManager *log_manager = nullptr);
+  /* BufferPoolManagerInstance(size_t pool_size, DiskManager *disk_manager, size_t replacer_k = LRUK_REPLACER_K,
+                             LogManager *log_manager = nullptr);*/
+
+  /**
+   * Creates a new BufferPoolManagerInstance.
+   * @param pool_size the size of the buffer pool
+   * @param disk_manager the disk manager
+   * @param log_manager the log manager (for testing only: nullptr = disable logging)
+   */
+  BufferPoolManagerInstance(size_t pool_size, DiskManager *disk_manager, LogManager *log_manager = nullptr);
+  /**
+   * Creates a new BufferPoolManagerInstance.
+   * @param pool_size the size of the buffer pool
+   * @param num_instances total number of BPIs in parallel BPM
+   * @param instance_index index of this BPI in the parallel BPM
+   * @param disk_manager the disk manager
+   * @param log_manager the log manager (for testing only: nullptr = disable logging)
+   */
+  BufferPoolManagerInstance(size_t pool_size, uint32_t num_instances, uint32_t instance_index,
+                            DiskManager *disk_manager, LogManager *log_manager = nullptr);
 
   /**
    * @brief Destroy an existing BufferPoolManagerInstance.
@@ -142,6 +160,10 @@ class BufferPoolManagerInstance : public BufferPoolManager {
 
   /** Number of pages in the buffer pool. */
   const size_t pool_size_;
+  /** How many instances are in the parallel BPM (if present, otherwise just 1 BPI) */
+  const uint32_t num_instances_ = 1;
+  /** Index of this BPI in the parallel BPM (if present, otherwise just 0) */
+  const uint32_t instance_index_ = 0;
   /** The next page id to be allocated  */
   std::atomic<page_id_t> next_page_id_ = 0;
   /** Bucket size for the extendible hash table */
@@ -154,9 +176,11 @@ class BufferPoolManagerInstance : public BufferPoolManager {
   /** Pointer to the log manager. Please ignore this for P1. */
   LogManager *log_manager_ __attribute__((__unused__));
   /** Page table for keeping track of buffer pool pages. */
-  ExtendibleHashTable<page_id_t, frame_id_t> *page_table_;
+  //ExtendibleHashTable<page_id_t, frame_id_t> *page_table_;
+  std::unordered_map<page_id_t, frame_id_t> page_table_;
+
   /** Replacer to find unpinned pages for replacement. */
-  LRUKReplacer *replacer_;
+  LRUReplacer *replacer_;
   /** List of free frames that don't have any pages on them. */
   std::list<frame_id_t> free_list_;
   /** This latch protects shared data structures. We recommend updating this comment to describe what it protects. */
@@ -177,5 +201,23 @@ class BufferPoolManagerInstance : public BufferPoolManager {
   }
 
   // TODO(student): You may add additional private members and helper functions
-};
+ private:
+  /**
+   * Find a fresh page.
+   * @return the frame id of the fresh page, or -1 if not found.
+   */
+  frame_id_t FindFreshPage();
+
+  void FlushPg(page_id_t page_id);
+
+  /**
+   * Find the page specified by page id
+   * @param page_id the page id of the page to be found.
+   * @return the frame id of the page, or -1 if not found.
+   */
+  frame_id_t FindPage(page_id_t page_id);
+
+  void ValidatePageId(const page_id_t page_id) const;
+
+  };
 }  // namespace bustub
