@@ -21,7 +21,16 @@ namespace bustub {
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 auto HASH_TABLE_BUCKET_TYPE::GetValue(KeyType key, KeyComparator cmp, std::vector<ValueType> *result) -> bool {
-  return false;
+  for(uint32_t i = 0; i <  BUCKET_ARRAY_SIZE; i++) {
+    if(!IsReadable(i)) {
+      continue;
+    }
+
+    if(cmp(KeyAt(i) == key) == 0) {
+      result->push_back(ValueAt(i));
+    }
+  }
+  return !result->empty();
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
@@ -36,12 +45,12 @@ auto HASH_TABLE_BUCKET_TYPE::Remove(KeyType key, ValueType value, KeyComparator 
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 auto HASH_TABLE_BUCKET_TYPE::KeyAt(uint32_t bucket_idx) const -> KeyType {
-  return {};
+  return array_[bucket_idx].first;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 auto HASH_TABLE_BUCKET_TYPE::ValueAt(uint32_t bucket_idx) const -> ValueType {
-  return {};
+  return array_[bucket_idx].second;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
@@ -57,7 +66,8 @@ void HASH_TABLE_BUCKET_TYPE::SetOccupied(uint32_t bucket_idx) {}
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 auto HASH_TABLE_BUCKET_TYPE::IsReadable(uint32_t bucket_idx) const -> bool {
-  return false;
+  auto location =  GetLocation(bucket_idx);
+  return (readable_[location.first] & (1 << location.second)) != 0;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
